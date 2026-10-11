@@ -1,0 +1,9 @@
+id,source,customer_name,feedback_text,date
+1,Survey,Sarah Jenkins,Checkout button fails to respond on iOS Safari during peak load,2026-10-01
+2,Support Ticket,Marcus Vance,Double billed for my monthly tier subscription,2026-10-02
+3,App Review,Priya Sharma,Analytics dashboard load times are above 8 seconds,2026-10-03
+4,Twitter,Alex Rivera,Love the new UI interface update! Clean and responsive,2026-10-04
+5,Survey,David Miller,Need dark mode options for night monitoring,2026-10-05
+6,Support Ticket,Elena Rostova,Password reset link expires within 2 minutes before email arrives,2026-10-06
+7,App Review,Chris Wong,Exporting PDF reports fails when date filter spans over 30 days,2026-10-07
+8,Survey,Anita Desai,Customer support team resolved my query within 10 minutes,2026-10-08
