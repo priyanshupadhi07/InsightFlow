@@ -1,94 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>InsightFlow — Intelligent Feedback & Decision Platform</title>
-  <!-- Tailwind CSS CDN -->
+  
+  <!-- External Libraries -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- PapaParse CDN for CSV Ingestion -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-  <!-- jsPDF CDN for Report Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+<body class="min-h-screen">
 
   <!-- Navigation Header -->
-  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+  <header class="border-b sticky top-0 z-50 backdrop-blur">
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <div class="h-9 w-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl">⚡</div>
-        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">InsightFlow</h1>
+        <div class="h-9 w-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl text-white">⚡</div>
+        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-cyan-500 bg-clip-text text-transparent">InsightFlow</h1>
       </div>
       <div class="flex items-center gap-3">
-        <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Adaption AI Active</span>
-        <button id="exportPdfBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Export PDF Report</button>
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="p-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 transition" title="Toggle Light/Dark Mode">
+          <span id="themeIcon">🌙</span>
+        </button>
+
+        <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium">Adaption AI Active</span>
+        <button id="exportPdfBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm">Export PDF Report</button>
       </div>
     </div>
   </header>
 
-  <!-- Interactive Feedback Data Table -->
-    <section class="bg-slate-800/40 border border-slate-700/50 p-6 rounded-xl">
-      <h3 class="text-base font-semibold mb-4 text-slate-200">Customer Feedback Logs</h3>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-300">
-          <thead class="bg-slate-900/60 text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700">
-            <tr>
-              <th class="px-4 py-3">Source</th>
-              <th class="px-4 py-3">Customer</th>
-              <th class="px-4 py-3">Feedback Text</th>
-              <th class="px-4 py-3">Category</th>
-              <th class="px-4 py-3">Sentiment</th>
-              <th class="px-4 py-3">Date</th>
-            </tr>
-          </thead>
-          <tbody id="feedbackTableBody" class="divide-y divide-slate-800">
-            <!-- Dynamic rows injected here -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-    <!-- KPI Summary Section -->
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-slate-800/50 border border-slate-700/50 p-5 rounded-xl">
-        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Feedback</p>
-        <p id="kpiTotal" class="text-3xl font-bold mt-2">0</p>
+    <!-- KPI Summary Cards -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-transparent border-none shadow-none">
+      <div class="theme-card border p-5 rounded-xl">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted">Total Feedback</p>
+        <p id="kpiTotal" class="text-3xl font-bold mt-2 text-heading">0</p>
       </div>
-      <div class="bg-slate-800/50 border border-slate-700/50 p-5 rounded-xl">
-        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Net Sentiment</p>
-        <p id="kpiSentiment" class="text-3xl font-bold mt-2 text-cyan-400">0%</p>
+      <div class="theme-card border p-5 rounded-xl">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted">Net Sentiment</p>
+        <p id="kpiSentiment" class="text-3xl font-bold mt-2 text-cyan-500">0%</p>
       </div>
-      <div class="bg-slate-800/50 border border-slate-700/50 p-5 rounded-xl">
-        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Critical Issues</p>
-        <p id="kpiCritical" class="text-3xl font-bold mt-2 text-rose-400">0</p>
+      <div class="theme-card border p-5 rounded-xl">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted">Critical Issues</p>
+        <p id="kpiCritical" class="text-3xl font-bold mt-2 text-rose-500">0</p>
       </div>
-      <div class="bg-slate-800/50 border border-slate-700/50 p-5 rounded-xl">
-        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Primary Driver</p>
-        <p id="kpiDriver" class="text-xl font-bold mt-2 text-amber-400">UI/UX Bug</p>
+      <div class="theme-card border p-5 rounded-xl">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted">Primary Driver</p>
+        <p id="kpiDriver" class="text-xl font-bold mt-2 text-amber-500">UI/UX Bug</p>
       </div>
     </section>
 
-    <!-- Data Controls & Upload Section -->
-    <section class="bg-slate-800/40 border border-slate-700/50 p-6 rounded-xl flex flex-wrap gap-4 justify-between items-center">
+    <!-- Controls & Upload Section -->
+    <section class="theme-card border p-6 rounded-xl flex flex-wrap gap-4 justify-between items-center">
       <div class="flex items-center gap-3">
-        <button id="loadDemoBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium px-4 py-2 rounded-lg transition">Load Demo Dataset</button>
-        <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 text-sm px-4 py-2 rounded-lg cursor-pointer transition">
+        <!-- Load Demo Dataset -->
+        <button id="loadDemoBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition shadow-sm">
+          Load Demo Dataset
+        </button>
+        
+        <!-- Upload CSV File -->
+        <label class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition shadow-sm">
           Upload CSV File
           <input type="file" id="csvFileInput" accept=".csv" class="hidden">
         </label>
-        <!-- NEW CLEAR BUTTON -->
-        <button id="clearAllBtn" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-sm font-medium px-4 py-2 rounded-lg transition">Clear All Data</button>
+
+        <!-- Download Template CSV -->
+        <button id="downloadTemplateBtn" class="border border-indigo-300 dark:border-indigo-800 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm">
+          Download Template CSV
+        </button>
+
+        <!-- Clear All Data -->
+        <button id="clearAllBtn" class="border border-rose-300 dark:border-rose-900 bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-sm font-medium px-4 py-2 rounded-lg transition shadow-sm">
+          Clear All Data
+        </button>
       </div>
+
+      <!-- Search & Category Filters -->
       <div class="flex gap-3">
-        <input type="text" id="searchInput" placeholder="Search feedback..." class="bg-slate-900 border border-slate-700 text-sm text-slate-200 px-4 py-2 rounded-lg focus:outline-none focus:border-indigo-500">
-        <select id="categoryFilter" class="bg-slate-900 border border-slate-700 text-sm text-slate-200 px-3 py-2 rounded-lg focus:outline-none focus:border-indigo-500">
+        <input type="text" id="searchInput" placeholder="Search feedback..." class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select id="categoryFilter" class="border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="ALL">All Categories</option>
           <option value="UI/UX Bug">UI/UX Bug</option>
           <option value="Billing">Billing</option>
@@ -99,14 +96,40 @@
     </section>
 
     <!-- Analytics Dashboard Visualizations -->
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-slate-800/40 border border-slate-700/50 p-6 rounded-xl">
-        <h3 class="text-base font-semibold mb-4">Sentiment Distribution</h3>
-        <canvas id="sentimentChart" class="max-h-64"></canvas>
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-transparent border-none shadow-none">
+      <div class="theme-card border p-6 rounded-xl">
+        <h3 class="text-base font-semibold mb-4 text-heading">Sentiment Distribution</h3>
+        <div class="chart-container">
+          <canvas id="sentimentChart"></canvas>
+        </div>
       </div>
-      <div class="bg-slate-800/40 border border-slate-700/50 p-6 rounded-xl">
-        <h3 class="text-base font-semibold mb-4">Recurring Complaints by Topic</h3>
-        <canvas id="categoryChart" class="max-h-64"></canvas>
+      <div class="theme-card border p-6 rounded-xl">
+        <h3 class="text-base font-semibold mb-4 text-heading">Recurring Complaints by Topic</h3>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feedback Table -->
+    <section class="theme-card border p-6 rounded-xl">
+      <h3 class="text-base font-semibold mb-4 text-heading">Customer Feedback Logs</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wider border-b">
+            <tr>
+              <th class="px-4 py-3">Source</th>
+              <th class="px-4 py-3">Customer</th>
+              <th class="px-4 py-3">Feedback Text</th>
+              <th class="px-4 py-3">Category</th>
+              <th class="px-4 py-3">Sentiment</th>
+              <th class="px-4 py-3">Date</th>
+            </tr>
+          </thead>
+          <tbody id="feedbackTableBody" class="divide-y border-slate-200 dark:divide-slate-800">
+            <!-- Dynamic rows injected via js/app.js -->
+          </tbody>
+        </table>
       </div>
     </section>
 

@@ -6,7 +6,12 @@ let sentimentChartInstance = null;
 let categoryChartInstance = null;
 
 function renderCharts(feedbackData) {
-  // Aggregate Sentiment
+  // Detect theme state
+  const isDark = document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#94a3b8' : '#475569'; 
+  const gridColor = isDark ? 'rgba(51, 65, 85, 0.4)' : 'rgba(226, 232, 240, 0.8)';
+
+  // Aggregate Sentiment & Category Counts
   let posCount = 0, neuCount = 0, negCount = 0;
   const categoryCounts = {};
 
@@ -35,8 +40,16 @@ function renderCharts(feedbackData) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#94a3b8' } }
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: textColor,
+            font: { family: 'ui-sans-serif, system-ui', size: 12 },
+            padding: 16
+          }
+        }
       }
     }
   });
@@ -58,9 +71,16 @@ function renderCharts(feedbackData) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
-        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+        x: {
+          ticks: { color: textColor, font: { family: 'ui-sans-serif, system-ui' } },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: textColor, stepSize: 1, font: { family: 'ui-sans-serif, system-ui' } },
+          grid: { color: gridColor }
+        }
       },
       plugins: {
         legend: { display: false }
