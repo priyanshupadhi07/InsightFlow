@@ -1,10 +1,22 @@
 /**
- * InsightFlow — Main Application Controller
+ * InsightFlow — Main Controller with Supabase Auth & Cloud Data Persistence
  */
 
 let currentFeedbackStore = [];
+let currentUser = null;
+let isSignUpMode = false;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Elements
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const openAuthModalBtn = document.getElementById('openAuthModalBtn');
+  const closeAuthModal = document.getElementById('closeAuthModal');
+  const authModal = document.getElementById('authModal');
+  const authForm = document.getElementById('authForm');
+  const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  // Controls
   const loadDemoBtn = document.getElementById('loadDemoBtn');
   const csvFileInput = document.getElementById('csvFileInput');
   const searchInput = document.getElementById('searchInput');
@@ -12,8 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const exportPdfBtn = document.getElementById('exportPdfBtn');
   const clearAllBtn = document.getElementById('clearAllBtn');
   const downloadTemplateBtn = document.getElementById('downloadTemplateBtn');
-  const themeToggleBtn = document.getElementById('themeToggleBtn');
-  
+
   // Initialize Saved Theme
   const savedTheme = localStorage.getItem('theme') || 'dark';
   applyTheme(savedTheme);
@@ -21,70 +32,185 @@ document.addEventListener('DOMContentLoaded', () => {
   if (themeToggleBtn) {
     themeToggleBtn.addEventListener('click', () => {
       const isDark = document.documentElement.classList.contains('dark');
-      const newTheme = isDark ? 'light' : 'dark';
-      applyTheme(newTheme);
+      applyTheme(isDark ? 'light' : 'dark');
     });
   }
 
-  // Download Blank CSV Template
-  if (downloadTemplateBtn) {
-    downloadTemplateBtn.addEventListener('click', downloadCsvTemplate);
+  // --- AUTHENTICATION LISTENERS ---
+  openAuthModalBtn.addEventListener('click', () => authModal.classList.remove('hidden'));
+  closeAuthModal.addEventListener('click', () => authModal.classList.add('hidden'));
+
+  toggleAuthModeBtn.addEventListener('click', () => {
+    isSignUpMode = !isSignUpMode;
+    document.getElementById('authTitle').innerText = isSignUpMode ? 'Register New Account' : 'Sign In to InsightFlow';
+    document.getElementById('authSubmitBtn').innerText = isSignUpMode ? 'Create Account' : 'Sign In';
+    toggleAuthModeBtn.innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Register here";
+  });
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
+    const errorEl = document.getElementById('authError');
+    errorEl.classList.add('hidden');
+
+    try {
+      if (isSignUpMode) {
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) throw error;
+        alert('Registration successful! Check your email or sign in.');
+      } else {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        currentUser = data.user;
+        updateUserUI(currentUser);
+        authModal.classList.add('hidden');
+        await loadUserFeedbackFromCloud();
+      }
+    } catch (err) {
+      errorEl.innerText = err.message;
+      errorEl.classList.remove('hidden');
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    updateUserUI(null);
+    clearDashboard();
+  });
+
+  // Check existing session on boot
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    updateUserUI(currentUser);
+    await loadUserFeedbackFromCloud();
+  } else {
+    // Default guest demo initialization
+    initializeData(MOCK_FEEDBACK_DATA, false);
   }
 
-  // Clear All Data Event
-  if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', () => {
-      clearDashboard();
-    });
-  }
+  // Action listeners
+  if (downloadTemplateBtn) downloadTemplateBtn.addEventListener('click', downloadCsvTemplate);
+  if (clearAllBtn) clearAllBtn.addEventListener('click', handleClearAll);
 
-  // Load Demo Data Event
   if (loadDemoBtn) {
     loadDemoBtn.addEventListener('click', async () => {
       document.getElementById('searchInput').value = '';
       document.getElementById('categoryFilter').value = 'ALL';
-      
-      await initializeData(MOCK_FEEDBACK_DATA);
-      
-      loadDemoBtn.innerText = 'Loaded 8 Demo Items! ✓';
-      loadDemoBtn.classList.remove('bg-indigo-600');
-      loadDemoBtn.classList.add('bg-emerald-600');
-      
-      setTimeout(() => {
-        loadDemoBtn.innerText = 'Load Demo Dataset';
-        loadDemoBtn.classList.remove('bg-emerald-600');
-        loadDemoBtn.classList.add('bg-indigo-600');
-      }, 2000);
+      await initializeData(MOCK_FEEDBACK_DATA, true);
     });
   }
 
-  // Upload CSV File Event
   if (csvFileInput) {
     csvFileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (file) {
         const parsedData = await parseCSVFile(file);
-        await initializeData(parsedData);
+        await initializeData(parsedData, true);
       }
     });
   }
 
-  // Search & Filter Listeners
   if (searchInput) searchInput.addEventListener('input', applyFilters);
   if (categoryFilter) categoryFilter.addEventListener('change', applyFilters);
-
-  // Export PDF Event
   if (exportPdfBtn) exportPdfBtn.addEventListener('click', generatePdfReport);
-
-  // Initial Load
-  initializeData(MOCK_FEEDBACK_DATA);
 });
 
-async function initializeData(rawData) {
-  currentFeedbackStore = await processFeedbackBatchWithAI(rawData);
+// Update Header User UI
+function updateUserUI(user) {
+  const openAuthModalBtn = document.getElementById('openAuthModalBtn');
+  const userInfo = document.getElementById('userInfo');
+  const userEmailTag = document.getElementById('userEmailTag');
+
+  if (user) {
+    openAuthModalBtn.classList.add('hidden');
+    userInfo.classList.remove('hidden');
+    userInfo.classList.add('flex');
+    userEmailTag.innerText = user.email;
+  } else {
+    openAuthModalBtn.classList.remove('hidden');
+    userInfo.classList.add('hidden');
+    userInfo.classList.remove('flex');
+  }
+}
+
+// Process and optionally persist data to Supabase cloud
+async function initializeData(rawData, persistToCloud = false) {
+  const processedBatch = await processFeedbackBatchWithAI(rawData);
+  currentFeedbackStore = processedBatch;
+
+  if (currentUser && persistToCloud) {
+    // Save records into Supabase database
+    const dbPayload = processedBatch.map(item => ({
+      user_id: currentUser.id,
+      source: item.source,
+      customer_name: item.customer_name,
+      feedback_text: item.feedback_text,
+      category: item.category,
+      sentiment: item.sentiment,
+      date: item.date
+    }));
+
+    const { error } = await supabaseClient.from('feedback').insert(dbPayload);
+    if (error) {
+      console.error('Error persisting feedback:', error);
+    } else {
+      await loadUserFeedbackFromCloud();
+      return;
+    }
+  }
+
   updateKPIs(currentFeedbackStore);
   renderCharts(currentFeedbackStore);
   renderTable(currentFeedbackStore);
+}
+
+// Fetch user's historical saved records from Cloud
+async function loadUserFeedbackFromCloud() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from('feedback')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching user feedback:', error);
+    return;
+  }
+
+  currentFeedbackStore = data || [];
+  updateKPIs(currentFeedbackStore);
+  renderCharts(currentFeedbackStore);
+  renderTable(currentFeedbackStore);
+}
+
+// Clear local & database state
+async function handleClearAll() {
+  if (currentUser) {
+    const confirmDelete = confirm("Are you sure? This will delete all your stored feedback from the database.");
+    if (!confirmDelete) return;
+
+    await supabaseClient.from('feedback').delete().eq('user_id', currentUser.id);
+  }
+  clearDashboard();
+}
+
+function clearDashboard() {
+  currentFeedbackStore = [];
+  document.getElementById('searchInput').value = '';
+  document.getElementById('categoryFilter').value = 'ALL';
+  document.getElementById('csvFileInput').value = '';
+
+  document.getElementById('kpiTotal').innerText = '0';
+  document.getElementById('kpiSentiment').innerText = '0%';
+  document.getElementById('kpiCritical').innerText = '0';
+  document.getElementById('kpiDriver').innerText = 'None';
+
+  renderCharts([]);
+  renderTable([]);
 }
 
 function updateKPIs(data) {
@@ -176,22 +302,6 @@ function renderTable(data) {
     `;
     tbody.appendChild(tr);
   });
-}
-
-function clearDashboard() {
-  currentFeedbackStore = [];
-
-  document.getElementById('searchInput').value = '';
-  document.getElementById('categoryFilter').value = 'ALL';
-  document.getElementById('csvFileInput').value = '';
-
-  document.getElementById('kpiTotal').innerText = '0';
-  document.getElementById('kpiSentiment').innerText = '0%';
-  document.getElementById('kpiCritical').innerText = '0';
-  document.getElementById('kpiDriver').innerText = 'None';
-
-  renderCharts([]);
-  renderTable([]);
 }
 
 function downloadCsvTemplate() {
