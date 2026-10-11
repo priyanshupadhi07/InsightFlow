@@ -54,14 +54,17 @@ function renderCharts(feedbackData) {
     }
   });
 
-  // Render Category Bar Chart
+  // Render Category Bar Chart with Multiline Stacked Labels
   const ctxCategory = document.getElementById('categoryChart').getContext('2d');
   if (categoryChartInstance) categoryChartInstance.destroy();
+
+  // Split multi-word category names into arrays so each word stacks vertically
+  const multilineCategoryLabels = Object.keys(categoryCounts).map(cat => cat.split(' '));
 
   categoryChartInstance = new Chart(ctxCategory, {
     type: 'bar',
     data: {
-      labels: Object.keys(categoryCounts),
+      labels: multilineCategoryLabels,
       datasets: [{
         label: 'Feedback Frequency',
         data: Object.values(categoryCounts),
@@ -74,7 +77,12 @@ function renderCharts(feedbackData) {
       maintainAspectRatio: false,
       scales: {
         x: {
-          ticks: { color: textColor, font: { family: 'ui-sans-serif, system-ui' } },
+          ticks: { 
+            color: textColor, 
+            font: { family: 'ui-sans-serif, system-ui', size: 11 },
+            maxRotation: 0, // Keeps text horizontal so stacked words sit straight below the bars
+            minRotation: 0
+          },
           grid: { display: false }
         },
         y: {

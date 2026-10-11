@@ -37,48 +37,54 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // --- AUTHENTICATION LISTENERS ---
-  openAuthModalBtn.addEventListener('click', () => authModal.classList.remove('hidden'));
-  closeAuthModal.addEventListener('click', () => authModal.classList.add('hidden'));
+  if (openAuthModalBtn) openAuthModalBtn.addEventListener('click', () => authModal.classList.remove('hidden'));
+  if (closeAuthModal) closeAuthModal.addEventListener('click', () => authModal.classList.add('hidden'));
 
-  toggleAuthModeBtn.addEventListener('click', () => {
-    isSignUpMode = !isSignUpMode;
-    document.getElementById('authTitle').innerText = isSignUpMode ? 'Register New Account' : 'Sign In to InsightFlow';
-    document.getElementById('authSubmitBtn').innerText = isSignUpMode ? 'Create Account' : 'Sign In';
-    toggleAuthModeBtn.innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Register here";
-  });
+  if (toggleAuthModeBtn) {
+    toggleAuthModeBtn.addEventListener('click', () => {
+      isSignUpMode = !isSignUpMode;
+      document.getElementById('authTitle').innerText = isSignUpMode ? 'Register New Account' : 'Sign In to InsightFlow';
+      document.getElementById('authSubmitBtn').innerText = isSignUpMode ? 'Create Account' : 'Sign In';
+      toggleAuthModeBtn.innerText = isSignUpMode ? 'Already have an account? Sign In' : "Don't have an account? Register here";
+    });
+  }
 
-  authForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
-    const errorEl = document.getElementById('authError');
-    errorEl.classList.add('hidden');
+  if (authForm) {
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const errorEl = document.getElementById('authError');
+      errorEl.classList.add('hidden');
 
-    try {
-      if (isSignUpMode) {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) throw error;
-        alert('Registration successful! Check your email or sign in.');
-      } else {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        currentUser = data.user;
-        updateUserUI(currentUser);
-        authModal.classList.add('hidden');
-        await loadUserFeedbackFromCloud();
+      try {
+        if (isSignUpMode) {
+          const { data, error } = await supabaseClient.auth.signUp({ email, password });
+          if (error) throw error;
+          alert('Registration successful! Check your email or sign in.');
+        } else {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          currentUser = data.user;
+          updateUserUI(currentUser);
+          authModal.classList.add('hidden');
+          await loadUserFeedbackFromCloud();
+        }
+      } catch (err) {
+        errorEl.innerText = err.message;
+        errorEl.classList.remove('hidden');
       }
-    } catch (err) {
-      errorEl.innerText = err.message;
-      errorEl.classList.remove('hidden');
-    }
-  });
+    });
+  }
 
-  logoutBtn.addEventListener('click', async () => {
-    await supabaseClient.auth.signOut();
-    currentUser = null;
-    updateUserUI(null);
-    clearDashboard();
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      updateUserUI(null);
+      clearDashboard();
+    });
+  }
 
   // Check existing session on boot
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -97,8 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (loadDemoBtn) {
     loadDemoBtn.addEventListener('click', async () => {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('categoryFilter').value = 'ALL';
+      if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+      if (document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = 'ALL';
       await initializeData(MOCK_FEEDBACK_DATA, true);
     });
   }
@@ -125,14 +131,21 @@ function updateUserUI(user) {
   const userEmailTag = document.getElementById('userEmailTag');
 
   if (user) {
-    openAuthModalBtn.classList.add('hidden');
-    userInfo.classList.remove('hidden');
-    userInfo.classList.add('flex');
-    userEmailTag.innerText = user.email;
+    if (openAuthModalBtn) openAuthModalBtn.classList.add('hidden');
+    if (userInfo) {
+      userInfo.classList.remove('hidden');
+      userInfo.classList.add('flex');
+    }
+    if (userEmailTag) {
+      userEmailTag.innerText = user.email;
+      userEmailTag.className = 'text-xs font-semibold';
+    }
   } else {
-    openAuthModalBtn.classList.remove('hidden');
-    userInfo.classList.add('hidden');
-    userInfo.classList.remove('flex');
+    if (openAuthModalBtn) openAuthModalBtn.classList.remove('hidden');
+    if (userInfo) {
+      userInfo.classList.add('hidden');
+      userInfo.classList.remove('flex');
+    }
   }
 }
 
@@ -142,7 +155,6 @@ async function initializeData(rawData, persistToCloud = false) {
   currentFeedbackStore = processedBatch;
 
   if (currentUser && persistToCloud) {
-    // Save records into Supabase database
     const dbPayload = processedBatch.map(item => ({
       user_id: currentUser.id,
       source: item.source,
@@ -164,6 +176,7 @@ async function initializeData(rawData, persistToCloud = false) {
 
   updateKPIs(currentFeedbackStore);
   renderCharts(currentFeedbackStore);
+  renderActionItems(currentFeedbackStore);
   renderTable(currentFeedbackStore);
 }
 
@@ -184,6 +197,7 @@ async function loadUserFeedbackFromCloud() {
   currentFeedbackStore = data || [];
   updateKPIs(currentFeedbackStore);
   renderCharts(currentFeedbackStore);
+  renderActionItems(currentFeedbackStore);
   renderTable(currentFeedbackStore);
 }
 
@@ -200,36 +214,37 @@ async function handleClearAll() {
 
 function clearDashboard() {
   currentFeedbackStore = [];
-  document.getElementById('searchInput').value = '';
-  document.getElementById('categoryFilter').value = 'ALL';
-  document.getElementById('csvFileInput').value = '';
+  if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+  if (document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = 'ALL';
+  if (document.getElementById('csvFileInput')) document.getElementById('csvFileInput').value = '';
 
-  document.getElementById('kpiTotal').innerText = '0';
-  document.getElementById('kpiSentiment').innerText = '0%';
-  document.getElementById('kpiCritical').innerText = '0';
-  document.getElementById('kpiDriver').innerText = 'None';
+  if (document.getElementById('kpiTotal')) document.getElementById('kpiTotal').innerText = '0';
+  if (document.getElementById('kpiSentiment')) document.getElementById('kpiSentiment').innerText = '0%';
+  if (document.getElementById('kpiCritical')) document.getElementById('kpiCritical').innerText = '0';
+  if (document.getElementById('kpiDriver')) document.getElementById('kpiDriver').innerText = 'None';
 
   renderCharts([]);
+  renderActionItems([]);
   renderTable([]);
 }
 
 function updateKPIs(data) {
-  document.getElementById('kpiTotal').innerText = data.length;
+  if (document.getElementById('kpiTotal')) document.getElementById('kpiTotal').innerText = data.length;
   
   const positiveCount = data.filter(d => d.sentiment === 'Positive').length;
   const negativeCount = data.filter(d => d.sentiment === 'Negative').length;
   const netSentiment = data.length > 0 ? Math.round(((positiveCount - negativeCount) / data.length) * 100) : 0;
   
-  document.getElementById('kpiSentiment').innerText = `${netSentiment}%`;
-  document.getElementById('kpiCritical').innerText = negativeCount;
+  if (document.getElementById('kpiSentiment')) document.getElementById('kpiSentiment').innerText = `${netSentiment}%`;
+  if (document.getElementById('kpiCritical')) document.getElementById('kpiCritical').innerText = negativeCount;
 
   const recommendations = generateAIRecommendations(data);
-  document.getElementById('kpiDriver').innerText = recommendations.primaryDriver;
+  if (document.getElementById('kpiDriver')) document.getElementById('kpiDriver').innerText = recommendations.primaryDriver;
 }
 
 function applyFilters() {
-  const query = document.getElementById('searchInput').value.toLowerCase();
-  const selectedCat = document.getElementById('categoryFilter').value;
+  const query = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const selectedCat = document.getElementById('categoryFilter')?.value || 'ALL';
 
   const filtered = currentFeedbackStore.filter(item => {
     const matchesSearch = item.feedback_text.toLowerCase().includes(query) || item.customer_name.toLowerCase().includes(query);
@@ -239,6 +254,7 @@ function applyFilters() {
 
   renderCharts(filtered);
   updateKPIs(filtered);
+  renderActionItems(filtered);
   renderTable(filtered);
 }
 
@@ -262,6 +278,51 @@ function generatePdfReport() {
   });
 
   doc.save("InsightFlow_Executive_Report.pdf");
+}
+
+function renderActionItems(data) {
+  const container = document.getElementById('actionItemsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    container.innerHTML = `<p class="text-xs text-muted italic col-span-3">No active feedback data available to generate recommendations.</p>`;
+    return;
+  }
+
+  const recommendations = generateAIRecommendations(data);
+
+  if (!recommendations.actionItems || recommendations.actionItems.length === 0) {
+    container.innerHTML = `<p class="text-xs text-muted italic col-span-3">No critical action items flagged for this dataset.</p>`;
+    return;
+  }
+
+  const isDark = document.documentElement.classList.contains('dark');
+
+  recommendations.actionItems.forEach(item => {
+    const card = document.createElement('div');
+    
+    let priorityBadge = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
+    if (item.priority === 'High' || item.priority === 'Critical') {
+      priorityBadge = 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30';
+    } else if (item.priority === 'Medium') {
+      priorityBadge = 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30';
+    }
+
+    const cardBg = isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200';
+
+    card.className = `p-4 rounded-lg border ${cardBg} space-y-2 flex flex-col justify-between`;
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h4 class="font-semibold text-sm text-heading">${item.title}</h4>
+          <span class="px-2 py-0.5 rounded text-xs font-semibold border ${priorityBadge}">${item.priority}</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">${item.recommendation}</p>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 function renderTable(data) {
@@ -335,6 +396,7 @@ function applyTheme(theme) {
 
   if (typeof currentFeedbackStore !== 'undefined' && currentFeedbackStore.length > 0) {
     renderCharts(currentFeedbackStore);
+    renderActionItems(currentFeedbackStore);
     renderTable(currentFeedbackStore);
   }
 }

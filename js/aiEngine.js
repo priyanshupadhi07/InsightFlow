@@ -1,129 +1,124 @@
 /**
- * InsightFlow — AI Analysis Engine
- * Powered by Adaption Platform / API
+ * InsightFlow — Pure Gemini AI Engine
+ * 100% Dynamic LLM Processing via Gemini 3.8 Flash
  */
 
-// Configuration for Adaption API / Fallback Processing
-const ADAPTION_CONFIG = {
-  apiKey: "", // Optional Adaption API Key if required by provider
-  endpoint: "https://api.adaption.ai/v1/analyze" // Adaption endpoint placeholder
-};
+const GEMINI_API_KEY = 'AQ.Ab8RN6Lz6Ga3h_wS2A1XuA3zjs2f-qeR_-asOgY5NaS9bLJPfw';
 
-/**
- * Main batch processing pipeline
- * Enriches raw feedback items with AI Sentiment, Category, and Urgency Scores.
- */
-async function processFeedbackBatchWithAI(feedbackItems) {
-  return Promise.all(
-    feedbackItems.map(async (item) => {
-      const aiResult = await analyzeSingleFeedback(item.feedback_text);
+let latestAIRecommendations = [];
+
+async function processFeedbackBatchWithAI(feedbackArray) {
+  if (!feedbackArray || feedbackArray.length === 0) {
+    latestAIRecommendations = [];
+    return [];
+  }
+
+  const itemsToAnalyze = feedbackArray.map((item, idx) => ({
+    id: idx,
+    feedback: item.feedback_text,
+    customer: item.customer_name,
+    source: item.source
+  }));
+
+  const promptText = `
+You are an advanced customer feedback intelligence engine.
+Analyze each feedback entry in the dataset.
+
+For each item, determine:
+1. "category": A concise, contextual category (e.g., "Payment Gateway", "Navbar Bug", "Customer Support", "Performance", "Feature Request", etc. — create appropriate categories dynamically).
+2. "sentiment": Strictly "Positive", "Negative", or "Neutral" based on customer context (e.g., failing payments or broken checkouts are strictly "Negative").
+
+Also, generate 3-4 overall actionable business recommendations for the dataset:
+- "title": Action title.
+- "priority": "Critical", "High", "Medium", or "Low".
+- "recommendation": A detailed, tailored solution.
+
+Input Dataset:
+${JSON.stringify(itemsToAnalyze)}
+
+Return ONLY a raw JSON object matching this schema without markdown fences or additional text:
+{
+  "classifications": [
+    {"id": 0, "category": "CategoryName", "sentiment": "SentimentName"}
+  ],
+  "actionItems": [
+    {
+      "title": "Title",
+      "priority": "Critical",
+      "recommendation": "Solution text"
+    }
+  ]
+}
+`;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('Gemini API Error Response:', response.status, errorBody);
+      alert(`Gemini API Error (${response.status}): Check browser console for details.`);
+      return feedbackArray;
+    }
+
+    const data = await response.json();
+    const rawContent = data.candidates[0].content.parts[0].text;
+    
+    // Clean markdown wrappers if returned
+    const cleanJson = rawContent
+      .replace(/^```json/g, '')
+      .replace(/^```/g, '')
+      .replace(/```$/g, '')
+      .trim();
+
+    const parsedResponse = JSON.parse(cleanJson);
+
+    latestAIRecommendations = parsedResponse.actionItems || [];
+    const classifications = parsedResponse.classifications || [];
+
+    return feedbackArray.map((item, idx) => {
+      const aiMatch = classifications.find(r => r.id === idx) || {};
       return {
         ...item,
-        sentiment: aiResult.sentiment,
-        sentiment_score: aiResult.sentimentScore,
-        category: aiResult.category,
-        urgency: aiResult.urgency,
-        summary: aiResult.summary
+        category: aiMatch.category || 'Uncategorized',
+        sentiment: aiMatch.sentiment || 'Neutral'
       };
-    })
-  );
+    });
+
+  } catch (error) {
+    console.error('Gemini AI Processing Error:', error);
+    alert('Failed to process data with Gemini API. Check console logs.');
+    return feedbackArray;
+  }
 }
 
-/**
- * Analyzes an individual feedback text string using Adaption logic
- */
-async function analyzeSingleFeedback(text) {
-  // Normalize text for processing
-  const lower = text.toLowerCase();
-
-  // 1. Sentiment Engine Logic
-  let sentiment = "Neutral";
-  let sentimentScore = 0.0;
-
-  const negativeKeywords = ["fail", "error", "slow", "bug", "expire", "billing", "charged", "double", "issue", "bad", "unresponsive"];
-  const positiveKeywords = ["love", "great", "clean", "resolved", "fantastic", "fast", "helpful", "good", "responsive"];
-
-  let negCount = negativeKeywords.filter(k => lower.includes(k)).length;
-  let posCount = positiveKeywords.filter(k => lower.includes(k)).length;
-
-  if (negCount > posCount) {
-    sentiment = "Negative";
-    sentimentScore = -0.75;
-  } else if (posCount > negCount) {
-    sentiment = "Positive";
-    sentimentScore = 0.85;
+function generateAIRecommendations(data) {
+  if (!data || data.length === 0) {
+    return { primaryDriver: 'None', actionItems: [] };
   }
 
-  // 2. Category Classification
-  let category = "Feature Request";
-  if (lower.includes("checkout") || lower.includes("button") || lower.includes("ui") || lower.includes("dark mode")) {
-    category = "UI/UX Bug";
-  } else if (lower.includes("billed") || lower.includes("subscription") || lower.includes("charge")) {
-    category = "Billing";
-  } else if (lower.includes("slow") || lower.includes("load") || lower.includes("performance") || lower.includes("speed")) {
-    category = "Performance";
-  } else if (lower.includes("support") || lower.includes("query") || lower.includes("ticket")) {
-    category = "Customer Support";
-  }
-
-  // 3. Urgency Scoring (1 to 5 Scale)
-  let urgency = 2;
-  if (sentiment === "Negative") {
-    urgency = category === "Billing" || category === "UI/UX Bug" ? 5 : 4;
-  } else if (sentiment === "Positive") {
-    urgency = 1;
-  }
-
-  return {
-    sentiment,
-    sentimentScore,
-    category,
-    urgency,
-    summary: text.length > 60 ? text.substring(0, 60) + "..." : text
-  };
-}
-
-/**
- * Intelligent Recommendation Generator
- * Generates prioritized executive insights based on aggregated issue patterns.
- */
-function generateAIRecommendations(analyzedFeedback) {
   const categoryCounts = {};
-  let totalNegative = 0;
-
-  analyzedFeedback.forEach(item => {
-    if (item.sentiment === "Negative") {
-      totalNegative++;
-      categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
-    }
+  data.forEach(item => {
+    categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
   });
 
-  // Find most critical category
-  let topCategory = "UI/UX Bug";
+  let primaryDriver = 'None';
   let maxCount = 0;
   for (const [cat, count] of Object.entries(categoryCounts)) {
     if (count > maxCount) {
       maxCount = count;
-      topCategory = cat;
+      primaryDriver = cat;
     }
   }
 
   return {
-    primaryDriver: topCategory,
-    criticalCount: totalNegative,
-    actionItems: [
-      {
-        title: `Mitigate ${topCategory} Vulnerabilities`,
-        priority: "High",
-        rationale: `Represented in ${maxCount > 0 ? maxCount : 1} urgent customer friction reports with high negative sentiment impact.`,
-        recommendation: `Deploy immediate hotfix sprint for ${topCategory.toLowerCase()} issues to stabilize customer retention.`
-      },
-      {
-        title: "Optimize API & System Response Rates",
-        priority: "Medium",
-        rationale: "Latency issues reported during peak hours affect user experience.",
-        recommendation: "Implement caching mechanisms and monitor endpoint response thresholds."
-      }
-    ]
+    primaryDriver,
+    actionItems: latestAIRecommendations
   };
 }
