@@ -219,6 +219,22 @@
     </section>
   </main>
 
+  <!-- AI Processing Overlay Spinner -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-50 hidden transition-all duration-300">
+    <div class="flex flex-col items-center gap-4 p-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-w-sm text-center">
+      <!-- Animated Spinner -->
+      <div class="relative w-12 h-12">
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin"></div>
+      </div>
+      
+      <div>
+        <h3 class="text-lg font-bold text-white mb-1">Analyzing Feedback...</h3>
+        <p class="text-xs text-zinc-400">Gemini 3.8 Flash is categorizing reviews and generating action items.</p>
+      </div>
+    </div>
+  </div>
+
   <script src="js/supabaseClient.js"></script>
   <script src="js/mockData.js"></script>
   <script src="js/csvParser.js"></script>

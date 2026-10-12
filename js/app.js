@@ -400,3 +400,59 @@ function applyTheme(theme) {
     renderTable(currentFeedbackStore);
   }
 }
+
+
+// Global Helper Functions for Loading Overlay
+window.showLoader = function() {
+  const loader = document.getElementById('loadingOverlay');
+  if (loader) loader.classList.remove('hidden');
+};
+
+window.hideLoader = function() {
+  const loader = document.getElementById('loadingOverlay');
+  if (loader) loader.classList.add('hidden');
+};
+
+// Handle CSV File Upload
+document.getElementById('csvFileInput')?.addEventListener('change', function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Show loader immediately
+  showLoader();
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async function (results) {
+      try {
+        const rawData = results.data;
+
+        // Process batch via Gemini API
+        const processedData = await processFeedbackBatchWithAI(rawData);
+
+        // Update local state and render dashboard
+        currentFeedbackData = processedData;
+
+        if (typeof renderDashboard === 'function') {
+          renderDashboard(processedData);
+        } else if (typeof renderCharts === 'function') {
+          renderCharts(processedData);
+        }
+      } catch (error) {
+        console.error('Error processing feedback batch:', error);
+        alert('An error occurred while analyzing the feedback. Check console for details.');
+      } finally {
+        // GUARANTEED: Loader closes no matter what happens above
+        hideLoader();
+        // Reset file input so re-uploading the same file triggers change event
+        event.target.value = '';
+      }
+    },
+    error: function (err) {
+      console.error('PapaParse Error:', err);
+      alert('Failed to parse CSV file.');
+      hideLoader();
+    }
+  });
+});

@@ -3,7 +3,7 @@
  * 100% Dynamic LLM Processing via Gemini 3.8 Flash
  */
 
-const GEMINI_API_KEY = 'AQ.Ab8RN6Lz6Ga3h_wS2A1XuA3zjs2f-qeR_-asOgY5NaS9bLJPfw';
+const GEMINI_API_KEY = 'AQ.Ab8RN6JnstvOpEQLdEJUc0i3pnE2d3-0Gi96eKkbJVHEIMFSaA';
 
 let latestAIRecommendations = [];
 
