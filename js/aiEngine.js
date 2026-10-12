@@ -29,9 +29,9 @@ For each item, determine:
 2. "sentiment": Strictly "Positive", "Negative", or "Neutral" based on customer context (e.g., failing payments or broken checkouts are strictly "Negative").
 
 Also, generate 3-4 overall actionable business recommendations for the dataset:
-- "title": Action title.
-- "priority": "Critical", "High", "Medium", or "Low".
-- "recommendation": A detailed, tailored solution.
+• "title": Action title.
+• "priority": "Critical", "High", "Medium", or "Low".
+• "recommendation": A detailed, tailored solution.
 
 Input Dataset:
 ${JSON.stringify(itemsToAnalyze)}
